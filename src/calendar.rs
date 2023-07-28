@@ -133,7 +133,7 @@ impl Calendar {
             let cols = 7;
             let first_day_of_month = Local.with_ymd_and_hms(r.0, r.1 as u32, 1, 0, 0, 0).unwrap();
             let days_in_current_month = Self::days_in_month(r.0, r.1 as u32);
-            let weekday_num = Self::get_weekday_number(first_day_of_month.weekday());
+            let weekday_num = Self::weekday_number(first_day_of_month.weekday());
             rows += 1;
             rows += (days_in_current_month - (7 - weekday_num)) / cols;
             if (days_in_current_month - (7 - weekday_num)) % cols != 0 {
@@ -191,7 +191,7 @@ impl Calendar {
             .with_ymd_and_hms(year, month as u32, 1, 0, 0, 0)
             .unwrap();
         let days_in_current_month = Self::days_in_month(year, month as u32);
-        let weekday_num = Self::get_weekday_number(first_day_of_month.weekday());
+        let weekday_num = Self::weekday_number(first_day_of_month.weekday());
         rows += 1;
         rows += (days_in_current_month - (7 - weekday_num)) / cols;
         if (days_in_current_month - (7 - weekday_num)) % cols != 0 {
@@ -273,7 +273,7 @@ impl Calendar {
     /// where `Weekday::Sun` = `0`.
     ///
     /// * `weekday` - `chrono::Weekday` to get the number of
-    fn get_weekday_number(weekday: chrono::Weekday) -> u32 {
+    fn weekday_number(weekday: chrono::Weekday) -> u32 {
         match weekday {
             Weekday::Sun => 0,
             Weekday::Mon => 1,
