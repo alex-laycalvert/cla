@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     disable_raw_mode()
 }
 
-fn parse_command_str(cmd_str: &String) -> Command {
+fn parse_command_str(cmd_str: &str) -> Command {
     if "month".starts_with(&cmd_str.to_lowercase()) {
         return Command::Month;
     }
@@ -44,8 +44,8 @@ fn parse_command_str(cmd_str: &String) -> Command {
     Command::Month
 }
 
-fn parse_range_str(range_str: &String) -> (i32, Option<i32>) {
-    if range_str.len() == 0 {
+fn parse_range_str(range_str: &str) -> (i32, Option<i32>) {
+    if range_str.is_empty() {
         return (0, None);
     }
     let tokens = range_str.split("..");
@@ -57,7 +57,7 @@ fn parse_range_str(range_str: &String) -> (i32, Option<i32>) {
         let n = match t.parse::<i32>() {
             Ok(n) => n,
             Err(_) => {
-                if t.len() == 0 {
+                if t.is_empty() {
                     0
                 } else {
                     return range;
