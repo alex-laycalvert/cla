@@ -1,7 +1,12 @@
 [package]
 name = "cla"
+authors = ["Alex Lay-Calvert"]
 version = "0.0.1"
 edition = "2021"
+description = "A terminal calendar tool"
+license = "MIT"
+repository = "https://github.com/alex-laycalvert/cla"
+homepage = "https://github.com/alex-laycalvert/cla"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
