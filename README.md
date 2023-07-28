@@ -19,7 +19,7 @@ USAGE:
 
 COMMANDS:
     month   Various ways of displaying months. Will display the
-    current month if no subcommand is given.
+            current month if no subcommand is given.
     year    Display the current year.
 
 SUBCOMMANDS:
