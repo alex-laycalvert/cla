@@ -8,6 +8,34 @@ I just started this project and if I follow through with it, the goal will be fo
 
 Right now, cloning and repo and running using `cargo run` will just print out a calendar just like calling `cal` with no arguments.
 
+## Installation
+
+Available at:
+- [crates.io](https://crates.io/crates) by running `cargo install cla`
+
+### Manual Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/alex-laycalvert/cla
+cd cla
+```
+
+Build the package:
+
+```bash
+cargo build --release
+```
+
+Run `cla`:
+
+```bash
+./target/release/cla
+```
+
+Optionally, you can also run `cargo run` from inside the repo to run `cla`.
+
 ## Usage
 
 ```text
