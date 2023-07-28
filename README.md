@@ -12,7 +12,7 @@ Right now, cloning and repo and running using `cargo run` will just print out a 
 
 Available at:
 - [crates.io](https://crates.io/crates) by running `cargo install cla`
-- [Arch AUR](https://aur.archlinux.org) on Arch Linux using a helper like `yay` or `paru`
+- [Arch AUR](https://aur.archlinux.org) as `cla-bin` on Arch Linux using a helper like `yay` or `paru`
 
 ### Manual Installation
 
