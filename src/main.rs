@@ -51,20 +51,20 @@ fn main() -> Result<()> {
 fn usage() {
     println!("cla");
     println!("A terminal calendar tool written in Rust");
-    println!("");
+    println!();
     println!("USAGE:");
     println!("\tcla [command] [subcommand]");
-    println!("");
+    println!();
     println!("COMMANDS:");
     println!("\tmonth\tVarious ways of displaying months. Will display the");
     println!("\t\tcurrent month if no subcommand is given.");
     println!("\tyear\tDisplay the current year.");
-    println!("");
+    println!();
     println!("SUBCOMMANDS:");
     println!("\tmonth\tFor the month command, the subcommand is interpreted");
     println!("\t\tas a number range representing the difference in months");
     println!("\t\tfrom the current month.");
-    println!("");
+    println!();
     println!("\t\tExamples:");
     println!("\t\t\tcla month 0\tThis month");
     println!("\t\t\tcla month -1\tLast month");
