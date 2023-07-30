@@ -12,4 +12,5 @@ homepage = "https://github.com/alex-laycalvert/cla"
 
 [dependencies]
 chrono = "0.4.26"
+clap = { version = "4.3.19", features = ["derive"] }
 crossterm = "0.26.1"

@@ -1,3 +1,4 @@
+use crate::cla::cli::CalendarArgs;
 use chrono::prelude::*;
 use crossterm::{
     cursor::{MoveRight, MoveUp},
@@ -5,7 +6,8 @@ use crossterm::{
     style::{
         Attribute, Color, Print, ResetColor, SetAttribute, SetBackgroundColor, SetForegroundColor,
     },
-    terminal, Result,
+    terminal::{self, disable_raw_mode, enable_raw_mode},
+    Result,
 };
 use std::io::stdout;
 
@@ -13,106 +15,104 @@ const CAL_WIDTH: u16 = 20;
 const CAL_HOR_PADDING: u16 = 4;
 const MAX_MONTHS_PER_ROW: u16 = 4;
 const CAL_HEADER_SIZE: u16 = 2;
+const MONTHS: [&str; 12] = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+];
 
 pub struct Calendar {}
 
 impl Calendar {
-    pub fn print_year(year: i32) -> Result<()> {
-        let months_per_row = Self::months_per_row()?;
-        let row_width = (months_per_row * (CAL_WIDTH + CAL_HOR_PADDING)) as usize;
-        execute!(
-            stdout(),
-            SetAttribute(Attribute::Bold),
-            Print(format!("\r\n{: ^row_width$}\r\n\n", year)),
-            SetAttribute(Attribute::Reset),
-        )?;
-        Self::print_range((0, Some(12)), year, false)
-    }
-
-    /// Display the given month as a calendar. Calls
-    /// [`print_month_highlight_day`](Calendar::print_month_highlight_day) with the given options,
-    /// no day to highlight, and to display the year in the title.
-    ///
-    /// * `year` - Year of month to display
-    /// * `month` - Month to display
-    pub fn _print_month(year: i32, month: i32) -> Result<()> {
-        Self::print_month_highlight_day(year, month, 0, true, 0)
-    }
-
-    /// Given a tuple representing the start and end of a range of
-    /// months where `1` = `January`, print each month as a calendar.
-    ///
-    /// * `range` - Tuple of numbers representing the range of months as indicies
-    ///             where the first `i32` is the start of the range and the second
-    ///             `Option<i32>` is the optional end of the range. If no end range
-    ///             is given, the start will be the only month displayed. `1` = `January,
-    ///             `2` = `February`, etc.
-    /// * `year` - Year of months
-    /// * `include_year` - Whether to include the year in the display of the months.
-    pub fn print_range(range: (i32, Option<i32>), year: i32, include_year: bool) -> Result<()> {
-        let today = Local::now();
-        let mut calendar_range = vec![];
-        let mut start = range.0 % 12;
-        if start <= 0 {
-            start = 1
-        }
-        if let Some(end) = range.1 {
-            for i in start..=end {
-                calendar_range.push((
-                    year,
-                    i,
-                    if i == today.month() as i32 && year == today.year() {
-                        today.day() as i32
-                    } else {
-                        0
-                    },
-                ));
-            }
+    pub fn years_from_args(args: CalendarArgs) -> Result<()> {
+        enable_raw_mode()?;
+        let range = if let Some(r) = args.relative_range {
+            Self::parse_year_relative_range(r)
         } else {
-            calendar_range.push((
-                year,
-                start,
-                if today.year() == year && start == today.month() as i32 {
+            vec![]
+        };
+        let today = Local::now();
+        let months_per_row = Self::months_per_row()?;
+        let row_width = (months_per_row * (CAL_WIDTH + CAL_HOR_PADDING) - CAL_HOR_PADDING) as usize;
+        for y in range {
+            let mut months = vec![];
+            for m in 1..=12 {
+                let d = if y == today.year() && m == today.month() as i32 {
                     today.day() as i32
                 } else {
                     0
-                },
-            ));
+                };
+                months.push((y, m, d));
+            }
+            execute!(
+                stdout(),
+                SetAttribute(Attribute::Bold),
+                Print(format!("\r\n{: ^row_width$}\r\n\n", y)),
+                SetAttribute(Attribute::Reset),
+            )?;
+            Self::print_months(months, false)?;
         }
-        Self::print_many_months(calendar_range, include_year)
+        disable_raw_mode()
     }
 
-    /// Given a tuple representing the start and end of a range of
-    /// months relative to the current month, display each month as
-    /// a calendar.
-    ///
-    /// * `range` - Tuple of numbers representing the relative difference in months
-    ///             from the current month where the first `i32` is the start of the range
-    ///             and the second `Option<i32>` is the optional end of the range. If no
-    ///             end range is given, the start will be the only month displayed.
-    ///             `-1` = last month, `0` = this month, `2` = two months from now, etc.
-    /// * `include_year` - Whether to include the year in the display of the months.
-    pub fn print_relative_range(range: (i32, Option<i32>), include_year: bool) -> Result<()> {
-        let today = Local::now();
-        let mut calendar_range = vec![];
-        let start = range.0;
-        if let Some(end) = range.1 {
-            for i in start..=end {
-                let mut y = today.year();
-                let mut m = today.month() as i32 + i;
-                if m > 12 {
-                    y += m / 12;
-                    m %= 12;
-                }
-                if m < 1 {
-                    y -= 1 + m.abs() / 12;
-                    m = 12 - (m.abs() % 12);
-                }
-                calendar_range.push((y, m, if i == 0 { today.day() as i32 } else { 0 }));
-            }
+    pub fn months_from_args(args: CalendarArgs) -> Result<()> {
+        enable_raw_mode()?;
+        let range = if let Some(r) = args.relative_range {
+            Self::parse_month_relative_range(r)
         } else {
+            Self::parse_month_range(args.range)
+        };
+        Self::print_months(range, true)?;
+        disable_raw_mode()
+    }
+
+    fn parse_month_range(range_str: Option<String>) -> Vec<(i32, i32, i32)> {
+        let today = Local::now();
+        let this_month = today.month() as i32;
+        let (start, end) = match range_str {
+            Some(range_str) => {
+                let splits: Vec<&str> = range_str.split("..").collect();
+                let mut start = splits[0].parse().unwrap_or(Self::month_number(splits[0])) % 12;
+                if start <= 0 {
+                    start = 1
+                }
+                let end = match splits.len() {
+                    2.. => splits[1].parse().unwrap_or(Self::month_number(splits[1])),
+                    _ => start,
+                };
+                (start, end)
+            }
+            None => return vec![(today.year(), today.month() as i32, today.day() as i32)],
+        };
+        let mut range = vec![];
+        let y = today.year();
+        for m in start..=end {
+            let d = if m == this_month {
+                today.day() as i32
+            } else {
+                0
+            };
+            range.push((y, m, d));
+        }
+        range
+    }
+
+    fn parse_month_relative_range(range_str: String) -> Vec<(i32, i32, i32)> {
+        let today = Local::now();
+        let (start, end) = Self::parse_relative_range_bounds(range_str);
+        let mut range = vec![];
+        for i in start..=end {
             let mut y = today.year();
-            let mut m = today.month() as i32 + start;
+            let mut m = today.month() as i32 + i;
             if m > 12 {
                 y += m / 12;
                 m %= 12;
@@ -121,12 +121,44 @@ impl Calendar {
                 y -= 1 + m.abs() / 12;
                 m = 12 - (m.abs() % 12);
             }
-            calendar_range.push((y, m, if start == 0 { today.day() as i32 } else { 0 }));
+            range.push((y, m, if i == 0 { today.day() as i32 } else { 0 }));
         }
-        Self::print_many_months(calendar_range, include_year)
+        range
     }
 
-    pub fn print_many_months(months: Vec<(i32, i32, i32)>, include_year: bool) -> Result<()> {
+    fn parse_year_relative_range(range_str: String) -> Vec<i32> {
+        let today = Local::now();
+        let (start, end) = Self::parse_relative_range_bounds(range_str);
+        let mut range = vec![];
+        for i in start..=end {
+            range.push(today.year() + i);
+        }
+        range
+    }
+
+    fn parse_relative_range_bounds(range_str: String) -> (i32, i32) {
+        let splits: Vec<&str> = range_str.split("..").collect();
+        if splits.is_empty() {
+            return (0, 0);
+        }
+        let start: i32 = splits[0].parse().unwrap_or_default();
+        let end: i32 = match splits.len() {
+            2.. => splits[1].parse().unwrap_or_default(),
+            _ => start,
+        };
+        (start, end)
+    }
+
+    fn month_number(month_str: &str) -> i32 {
+        for (i, m) in MONTHS.iter().enumerate() {
+            if m.starts_with(&month_str.to_lowercase()) {
+                return i as i32 + 1;
+            }
+        }
+        12
+    }
+
+    fn print_months(months: Vec<(i32, i32, i32)>, include_year: bool) -> Result<()> {
         let months_per_row = Self::months_per_row()?;
         for (i, r) in months.iter().enumerate() {
             let mut rows = 0;
@@ -155,29 +187,13 @@ impl Calendar {
         Ok(())
     }
 
-    /// Display the current month as a calendar. Calls
-    /// [`print_month_highlight_day`](Calendar::print_month_higlight_day) with
-    /// the current date.
-    ///
-    /// * `include_year` - If the year of the month should be included in the display
-    pub fn _print_current_month(include_year: bool) -> Result<()> {
-        let today = Local::now();
-        Self::print_month_highlight_day(
-            today.year(),
-            today.month() as i32,
-            today.day() as i32,
-            include_year,
-            0,
-        )
-    }
-
     /// Display the given month as a calendar.
     ///
     /// * `year` - Year of month to display
     /// * `month` - Month to display
     /// * `day` - Day to highlight on display, set to `0` to not highlight anything
     /// * `include_year` - If the year of the month should be included in the display
-    pub fn print_month_highlight_day(
+    fn print_month_highlight_day(
         year: i32,
         month: i32,
         day: i32,
@@ -256,11 +272,7 @@ impl Calendar {
         Ok(())
     }
 
-    /// Return the number of days in a given month
-    ///
-    /// * `year` - Year of month
-    /// * `month` - Month
-    pub fn days_in_month(year: i32, month: u32) -> u32 {
+    fn days_in_month(year: i32, month: u32) -> u32 {
         let next_month = if month == 12 { 1 } else { month + 1 };
         NaiveDate::from_ymd_opt(year, next_month, 1)
             .unwrap()
@@ -269,10 +281,6 @@ impl Calendar {
             .day()
     }
 
-    /// Returns the integer corresponding to the given `chrono::Weekday`
-    /// where `Weekday::Sun` = `0`.
-    ///
-    /// * `weekday` - `chrono::Weekday` to get the number of
     fn weekday_number(weekday: chrono::Weekday) -> u32 {
         match weekday {
             Weekday::Sun => 0,
@@ -290,5 +298,29 @@ impl Calendar {
         Ok((term_cols / (CAL_WIDTH + CAL_HOR_PADDING))
             .min(MAX_MONTHS_PER_ROW)
             .max(1))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::cla::modules::calendar::Calendar;
+
+    #[test]
+    fn relative_ranges() {
+        let inputs = vec![
+            ("", (0, 0)),
+            ("0", (0, 0)),
+            ("4", (4, 4)),
+            ("1..5", (1, 5)),
+            ("-2..5", (-2, 5)),
+            ("..5", (0, 5)),
+            ("-5..", (-5, 0)),
+        ];
+        for i in inputs {
+            assert_eq!(
+                i.1,
+                Calendar::parse_relative_range_bounds(String::from(i.0))
+            );
+        }
     }
 }
